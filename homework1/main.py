@@ -1,4 +1,31 @@
 from datetime import datetime
+from enum import Enum
+
+class TaskStatus(Enum):
+    """
+    Возможные статусы ML-задачи.
+
+    Attributes:
+        CREATED (str): Задача создана, но еще не запущена
+        IN_PROGRESS (str): Задача находится в процессе обработки
+        COMPLETED (str): Задача успешно выполнена
+        FAILED (str): Ошибка при выполнении задачи
+    """
+    CREATED = "created"
+    IN_PROGRESS = "in_progress"
+    COMPLETED = "completed"
+    FAILED = "failed"
+
+class UserRole(Enum):
+    """
+    Возможные роли пользователя в системе.
+    
+    Attributes:
+        CLIENT (str): Обычный пользователь системы
+        ADMIN (str): Администратор системы
+    """
+    CLIENT = "client"
+    ADMIN = "admin"
 
 class User:
     """
@@ -8,12 +35,11 @@ class User:
         user_id (int): Уникальный идентификатор пользователя
         username (str): Имя пользователя
         email (str): Email пользователя
-        role (str): Роль в системе (по умолчанию 'client')
+        role (UserRole): Роль в системе
         __password (str): Пароль пользователя
-        balance (float): Вычисляемое свойство (property). Возвращает текущий баланс в кредитах, 
-                            рассчитанный на основе истории транзакций пользователя.
+        balance (Balance): Объект управления счетом пользователя.
     """
-    def __init__(self, user_id: int, username: str, email: str, password: str, role: str = "client"):
+    def __init__(self, user_id: int, username: str, email: str, password: str, role: UserRole = UserRole.CLIENT):
         self.user_id = user_id
         self.username = username
         self.email = email
@@ -21,6 +47,7 @@ class User:
 
         self.__password = password
 
+        self.balance = Balance()
         self._validate_email()
         self._validate_password()
 
@@ -36,10 +63,21 @@ class User:
         """Проверяет пароль при авторизации пользователя."""
         pass
 
+class Balance:
+    """
+    Класс для управления балансом пользователя.
+    
+    Attributes:
+        current_balance (float): Вычисляемое свойство (property). Возвращает текущий баланс 
+                                    в кредитах, рассчитанный на основе истории транзакций (аккаунтинга).
+    """
+    def __init__(self):
+        pass
+    
     @property
-    def balance(self):
+    def current_balance(self):
         """
-        Вычисляет и возвращает итоговую сумму кредитов 
+        Вычисляет и возвращает итоговую сумму кредитов
         на основе истории транзакций (сумма пополнений минус сумма списаний).
         """
         pass
@@ -57,7 +95,6 @@ class User:
         Проверяет текущий вычисленный баланс и создает DebitTransaction.
         """
         pass
-
 
 class MLmodel:
     """
@@ -92,7 +129,7 @@ class MLtask:
         model (MLmodel): Объект ML-модели, которая будет выполнять задачу
         image_url (str): Ссылка на фотографию этикетки/коробки
         manual_text (str | None): Текст, введенный вручную при отсутствии названия товара на этикетке
-        status (str): Текущий статус выполнения ('created', 'in_progress', 'completed')
+        status (TaskStatus): Текущий статус выполнения
         result_text (str): Итоговое сгенерированное описание товара
     """
     def __init__(self, task_id: int, user: User, model: MLmodel, image_url: str, manual_text: str | None = None):
@@ -101,7 +138,7 @@ class MLtask:
         self.model = model
         self.image_url = image_url
         self.manual_text = manual_text
-        self.status = "created"
+        self.status = TaskStatus.CREATED
         self.result_text = ""
 
     def validate_inputs(self):
