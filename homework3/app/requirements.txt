@@ -1,0 +1,11 @@
+sqlalchemy
+fastapi
+uvicorn
+asyncpg
+psycopg
+psycopg-binary
+alembic
+pydantic
+pydantic-settings
+sqlmodel
+starlette

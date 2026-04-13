@@ -1,0 +1,80 @@
+from models.user import User
+from models.transaction import Transaction, TransactionType
+from sqlmodel import Session, select
+from sqlalchemy.orm import selectinload
+from typing import List
+
+def top_up_balance(user_id: int, amount: float, session: Session) -> Transaction:
+    """
+    Пополнение баланса пользователя.
+    Создает транзакцию типа CREDIT.
+    """
+    try:
+        if amount <= 0:
+            raise ValueError("Сумма пополнения должна быть больше нуля")
+        
+        user = session.get(User, user_id)
+        if not user:
+            raise ValueError("Пользователь не найден")
+        
+        transaction = Transaction(
+            user_id=user_id,
+            amount=amount,
+            type=TransactionType.CREDIT
+        )
+        session.add(transaction)
+        session.commit()
+        session.refresh(transaction)
+        return transaction
+    except Exception:
+        session.rollback()
+        raise
+
+def deduct_balance(user_id: int, amount: float, task_id: int, session: Session) -> Transaction:
+    """
+    Списание кредитов за ML-задачу.
+    Проверяет баланс перед списанием.
+    """
+    try:
+        if amount <= 0:
+            raise ValueError("Сумма списания должна быть больше нуля")
+        
+        statement = select(User).where(User.id == user_id).options(selectinload(User.transactions))
+        user = session.exec(statement).first()
+        
+        if not user:
+            raise ValueError("Пользователь не найден")
+        
+        if user.current_balance < amount:
+            raise ValueError(f"Недостаточно средств. Текущий баланс: {user.current_balance}")
+            
+        transaction = Transaction(
+            user_id=user_id,
+            task_id=task_id,
+            amount=amount,
+            type=TransactionType.DEBIT
+        )
+        session.add(transaction)
+        session.commit()
+        session.refresh(transaction)
+        return transaction
+    except Exception:
+        session.rollback()
+        raise
+
+def get_user_transactions(user_id: int, session: Session) -> List[Transaction]:
+    """
+    Получение истории транзакций пользователя.
+    Сортировка по дате (от новых к старым) и подгрузка связанной ML-задачи.
+    """
+    try:
+        statement = (
+            select(Transaction)
+            .where(Transaction.user_id == user_id)
+            .order_by(Transaction.created_at.desc())
+            .options(selectinload(Transaction.task))
+        )
+        transactions = session.exec(statement).all()
+        return transactions
+    except Exception as e:
+        raise
