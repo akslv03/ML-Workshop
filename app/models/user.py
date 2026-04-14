@@ -22,7 +22,6 @@ class User(SQLModel, table=True):
         email (str): Email пользователя
         password (str): Пароль пользователя
         role (UserRole): Роль в системе
-        current_balance (float): Текущий баланс кредитов пользователя
         created_at (datetime): Дата и время регистрации пользователя
     Relationships:
         tasks (List[MLTask]): Список задач на генерацию описаний, созданных пользователем
@@ -58,16 +57,6 @@ class User(SQLModel, table=True):
 
     def __str__(self) -> str:
         return f"Id: {self.id}. Username: {self.username}. Email: {self.email}"
-
-    @property
-    def current_balance(self) -> float:
-        balance = 0.0
-        for t in self.transactions:
-            if t.type.value == "credit":
-                balance += t.amount
-            elif t.type.value == "debit":
-                balance -= t.amount
-        return balance
 
     def _validate_email(self) -> bool:
         pattern = re.compile(r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$')

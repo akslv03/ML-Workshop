@@ -1,7 +1,7 @@
 from database.config import get_settings
 from database.database import init_db, get_database_engine
 from services.crud.user import get_all_users, create_user
-from services.crud.balance import top_up_balance, deduct_balance
+from services.crud.balance import top_up_balance, deduct_balance, get_user_balance
 from services.crud.ml_task import create_task
 from sqlmodel import Session, select
 from models.user import User, UserRole
@@ -61,7 +61,7 @@ if __name__ == "__main__":
     print('Пользователи из БД:')        
     for user in users:
         print(user)
-        print(f"Баланс: {user.current_balance}")
+        print(f"Баланс: {get_user_balance(user.id, session)}")
         
         print('Пользовательские задачи:')
         if len(user.tasks) == 0:
