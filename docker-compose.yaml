@@ -2,38 +2,40 @@ version: "3.8"
 services: 
   app:
     build: ./app/
-    image: event-planner-api:latest
-    container_name: event-planner-api
+    image: product-description-api:latest   
+    container_name: product-description-api
     restart: unless-stopped
     env_file:
     - ./app/.env
     volumes:
       - ./app:/app
+    depends_on:
+      - database
     networks:
-      - event-planner-network
-    healthcheck:
-      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8080/health')"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 20s
+      - product-description-network
+    # healthcheck:
+    #   test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8080/health')"]
+    #   interval: 30s
+    #   timeout: 10s
+    #   retries: 3
+    #   start_period: 20s
   web-proxy:
     image: nginx:latest
-    container_name: event-planner-nginx
+    container_name: product-description-nginx
     restart: unless-stopped
     ports:
       - "80:80"
       - "443:443"
-    depends_on:
-      app:
-        condition: service_healthy
+    # depends_on:
+    #   app:
+    #     condition: service_healthy
     volumes:
       - ./web-proxy/nginx.conf:/etc/nginx/nginx.conf
     networks:
-      - event-planner-network
+      - product-description-network
   rabbitmq:
     image: rabbitmq:3-management
-    container_name: event-planner-rabbitmq
+    container_name: product-description-rabbitmq
     restart: on-failure
     ports:
       - "5672:5672"
@@ -41,21 +43,23 @@ services:
     volumes:
       - rabbitmq_data:/var/lib/rabbitmq
     networks:
-      - event-planner-network
+      - product-description-network
   database:
-    image: postgres:15
-    container_name: event-planner-postgres
+    image: postgres:16-alpine
+    container_name: product-description-postgres
     restart: unless-stopped
     env_file:
-      - ./app/.env
+      - ./.env
     volumes:
       - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
     networks:
-      - event-planner-network
+      - product-description-network
 
 networks:
-  event-planner-network:
-    name: event-planner-network
+  product-description-network:
+    name: product-description-network
     driver: bridge
 
 volumes:

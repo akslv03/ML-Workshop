@@ -1,65 +1,78 @@
-from fastapi import FastAPI, HTTPException, Request
-from fastapi.responses import JSONResponse
-from typing import Dict
-import models.user
-import uvicorn
-import logging
+from database.config import get_settings
+from database.database import init_db, get_database_engine
+from services.crud.user import get_all_users, create_user
+from services.crud.balance import top_up_balance, deduct_balance, get_user_balance
+from services.crud.ml_task import create_task
+from sqlmodel import Session, select
+from models.user import User, UserRole
+from models.ml_model import MLModel
+from models.ml_task import MLTask, TaskStatus
+from models.transaction import Transaction, TransactionType
 
-# Настройка логирования
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-)
-logger = logging.getLogger(__name__)
-
-app = FastAPI(
-    title="Сервисное API",
-    description="API для управления событиями",
-    version="1.0.0"
-)
-
-@app.get("/", response_model=Dict[str, str])
-async def index() -> Dict[str, str]:
-    """
-    Корневой эндпоинт, возвращающий приветственное сообщение с информацией о пользователе.
+if __name__ == "__main__":
+    settings = get_settings()
+    print(settings.APP_NAME)
+    print(settings.API_VERSION)
+    print(f'Debug: {settings.DEBUG}')
     
-    Returns:
-        Dict[str, str]: Приветственное сообщение с информацией о пользователе
-    """
-    try:
-        user = models.user.User(id=1, email="Nick@gmail.com", password="12345678")
-        logger.info(f"Успешное выполнение маршрута index для пользователя: {user}")
-        return {"message": f"Hello world! User: {user}"}
-    except Exception as e:
-        logger.error(f"Ошибка в маршруте index: {str(e)}")
-        raise HTTPException(status_code=500, detail="Внутренняя ошибка сервера")
-
-@app.get("/health")
-async def health_check() -> Dict[str, str]:
-    """
-    Эндпоинт проверки работоспособности для мониторинга.
+    print(settings.DB_HOST)
+    print(settings.DB_NAME)
+    print(settings.DB_USER)
     
-    Returns:
-        Dict[str, str]: Сообщение о статусе
-    """
-    logger.info("Эндпоинт health_check успешно вызван")
-    return {"status": "healthy"}
+    init_db(drop_all=True)
+    print('Init db has been success')
+    
+    # test_user = User(username='test1', email='test1@gmail.com', password='test', role=UserRole.CLIENT)
+    test_user_2 = User(username='test2', email='test2@gmail.com', password='test', role=UserRole.CLIENT)
+    test_user_3 = User(username='test3', email='test3@gmail.com', password='test', role=UserRole.CLIENT)
+    
+    engine = get_database_engine()
+    
+    with Session(engine) as session:
+        # create_user(test_user, session)
+        create_user(test_user_2, session)
+        create_user(test_user_3, session)
+        
+        base_model = session.exec(select(MLModel)).first()
+        test_user = session.exec(select(User).where(User.email == "demo@client.com")).first()
+        
+        test_task = MLTask(
+            user_id=test_user.id,
+            ml_model_id=base_model.id,
+            image_url='test_url',
+            manual_text='test_manual_input',
+            status=TaskStatus.COMPLETED,
+            result_text='test_generated_description'
+        )
+        create_task(test_task, session)
+        
+        deduct_balance(user_id=test_user.id, amount=base_model.cost_per_prediction, task_id=test_task.id, session=session)
+        
+        users = get_all_users(session)
+        
+    print('-------')
+    print(f'Id локального пользователя: {id(test_user)}')
+    
+    db_user = next(u for u in users if u.email == 'demo@client.com')
+    print(f'Id пользователя из БД: {id(db_user)}')
+    print(f'Id одинаковые: {id(test_user) == id(db_user)}')
 
-# Обработчики ошибок
-@app.exception_handler(HTTPException)
-async def http_exception_handler(request: Request, exc: HTTPException) -> JSONResponse:
-    logger.warning(f"HTTPException: {exc.detail} для запроса {request.url}")
-    return JSONResponse(
-        status_code=exc.status_code,
-        content={"detail": exc.detail}
-    )
-
-if __name__ == '__main__':
-    uvicorn.run(
-        'main:app',
-        host='0.0.0.0',
-        port=8080,
-        reload=True,
-        log_level="debug"
-    )
-
+    print('-------')
+    print('Пользователи из БД:')        
+    for user in users:
+        print(user)
+        print(f"Баланс: {get_user_balance(user.id, session)}")
+        
+        print('Пользовательские задачи:')
+        if len(user.tasks) == 0:
+            print('Пользователь не имеет задач')
+        else:
+            for task in user.tasks:
+                print(task)
+                
+        print('Пользовательские транзакции:')
+        if len(user.transactions) == 0:
+            print('Пользователь не имеет транзакций')
+        else:
+            for transaction in user.transactions:
+                print(transaction)
