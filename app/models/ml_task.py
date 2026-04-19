@@ -56,13 +56,13 @@ class MLTask(SQLModel, table=True):
             raise ValueError("Нужно передать либо image_url, либо manual_text")
         return True
 
-    def run_task(self) -> None:
-        """Запускает обработку задачи моделью и обновляет статус."""
-        self.validate_inputs()
-        self.status = TaskStatus.IN_PROGRESS
+    # def run_task(self) -> None:
+    #     """Запускает обработку задачи моделью и обновляет статус."""
+    #     self.validate_inputs()
+    #     self.status = TaskStatus.IN_PROGRESS
         
-        self.result_text = "Готовое описание вашего товара."
-        self.status = TaskStatus.COMPLETED
+    #     self.result_text = "Готовое описание вашего товара."
+    #     self.status = TaskStatus.COMPLETED
 
 
     class Config:
