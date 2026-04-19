@@ -7,6 +7,8 @@ from services.crud import balance as BalanceService
 from services.crud import ml_task as TaskService
 from typing import Optional, List
 import logging
+from datetime import datetime
+from services.rm.rm import send_task
 
 logger = logging.getLogger(__name__)
 
@@ -19,14 +21,14 @@ class PredictRequest(BaseModel):
     manual_text: Optional[str] = None
 
 @predict_route.post(
-    "/generate",
-    response_model=MLTask,
+    "/",
+    # response_model=MLTask,
     status_code=status.HTTP_201_CREATED,
-    summary="Generate product description"
+    summary="Generate ML task"
 )
-async def generate_description(request: PredictRequest, session=Depends(get_session)) -> MLTask:
+async def generate_description(request: PredictRequest, session=Depends(get_session)):
     """
-    Создает задачу на генерацию, списывает баланс и запускает заглушку ML-модели.
+    Создает задачу, списывает баланс, отправляет задачу в RabbitMQ
     """
     try:
         model = session.get(MLModel, request.ml_model_id)
@@ -50,20 +52,35 @@ async def generate_description(request: PredictRequest, session=Depends(get_sess
             session=session
         )
 
-        saved_task.run_task()
+        # saved_task.run_task()
 
         session.add(saved_task)
         session.commit()
         session.refresh(saved_task)
 
-        logger.info(f"Task {saved_task.id} completed successfully for user {request.user_id}")
-        return saved_task
+        message = {
+            "task_id": saved_task.id,
+            "features": {
+                "x1": request.image_url,
+                "x2": request.manual_text
+            },
+            "model": model.name,
+            "timestamp": datetime.utcnow().isoformat()
+        }
+
+        send_task(message)
+
+        logger.info(f"Task {saved_task.id} sent to RabbitMQ successfully for user {request.user_id}")
+        return {
+            "task_id": saved_task.id, 
+            "status": saved_task.status
+        }
 
     except ValueError as ve:
-        logger.warning(f"Validation error during generation: {str(ve)}")
+        logger.warning(f"Validation error during task creation: {str(ve)}")
         raise HTTPException(status_code=400, detail=str(ve))
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Error during generation: {str(e)}")
+        logger.error(f"Error publishing task to RabbitMQ: {str(e)}")
         raise HTTPException(status_code=500, detail="Internal server error")

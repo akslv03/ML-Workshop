@@ -10,7 +10,7 @@ logger = logging.getLogger(__name__)
 user_route = APIRouter()
 
 @user_route.get(
-    "/get_all_users",
+    "/",
     response_model=List[User],
     summary="Get all users",
     response_description="List of all users"
