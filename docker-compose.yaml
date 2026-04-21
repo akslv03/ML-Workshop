@@ -34,6 +34,8 @@ services:
         condition: service_healthy
       database:
         condition: service_started
+      ollama:
+        condition: service_started
     deploy:
       replicas: 2
     environment:
@@ -82,6 +84,16 @@ services:
       - "5432:5432"
     networks:
       - product-description-network
+  ollama:
+    image: ollama/ollama
+    container_name: product-description-ollama
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama_data:/root/.ollama
+    restart: unless-stopped
+    networks:
+      - product-description-network
 
 networks:
   product-description-network:
@@ -91,3 +103,4 @@ networks:
 volumes:
   rabbitmq_data:
   postgres_data:
+  ollama_data:

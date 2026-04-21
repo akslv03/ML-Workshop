@@ -15,6 +15,15 @@ class Settings(BaseSettings):
     APP_DESCRIPTION: Optional[str] = None
     DEBUG: Optional[bool] = None
     API_VERSION: Optional[str] = None
+
+    # RabbitMQ settings
+    RABBITMQ_HOST: Optional[str] = None
+    RABBITMQ_PORT: Optional[int] = None
+    RABBITMQ_USER: Optional[str] = None
+    RABBITMQ_PASS: Optional[str] = None
+    RABBITMQ_QUEUE_NAME: Optional[str] = None
+    
+    OLLAMA_HOST: Optional[str] = None 
     
     @property
     def DATABASE_URL_asyncpg(self):

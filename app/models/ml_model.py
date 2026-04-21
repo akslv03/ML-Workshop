@@ -25,16 +25,6 @@ class MLModel(SQLModel, table=True):
     
     def __str__(self) -> str:
         return f"Model Id: {self.id}. Name: {self.name}"
-    
-    def predict(self, image_url: str, manual_text: Optional[str] = None) -> str:
-        """
-        Выполняет генерацию описания по входным данным. 
-        Принимает на вход фотографию этикетки + название товара текстом (если требуется).
-        """
-        if manual_text:
-            return f"Описание сгенерировано по картинке ({image_url}) с учетом ручной подсказки: '{manual_text}'"
-        else:
-            return f"Описание сгенерировано по картинке ({image_url})"
 
     class Config:
         validate_assignment = True

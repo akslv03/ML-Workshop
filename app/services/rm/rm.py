@@ -1,14 +1,17 @@
 import pika
 import json
+from database.config import get_settings
+
+settings = get_settings()
 
 # Параметры подключения
 connection_params = pika.ConnectionParameters(
-    host='rabbitmq',  # Замените на адрес вашего RabbitMQ сервера
-    port=5672,          # Порт по умолчанию для RabbitMQ
-    virtual_host='/',   # Виртуальный хост (обычно '/')
+    host=settings.RABBITMQ_HOST,
+    port=settings.RABBITMQ_PORT,
+    virtual_host='/',
     credentials=pika.PlainCredentials(
-        username='guest',  # Имя пользователя по умолчанию
-        password='guest'   # Пароль по умолчанию
+        username=settings.RABBITMQ_USER,
+        password=settings.RABBITMQ_PASS
     ),
     heartbeat=30,
     blocked_connection_timeout=2
@@ -19,7 +22,7 @@ def send_task(message:dict):
     channel = connection.channel()
     
     # Имя очереди
-    queue_name = 'ml_task_queue'
+    queue_name = settings.RABBITMQ_QUEUE_NAME
 
     # Отправка сообщения
     channel.queue_declare(queue=queue_name)  # Создание очереди (если не существует)

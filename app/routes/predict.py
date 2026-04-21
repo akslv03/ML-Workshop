@@ -84,3 +84,29 @@ async def generate_description(request: PredictRequest, session=Depends(get_sess
     except Exception as e:
         logger.error(f"Error publishing task to RabbitMQ: {str(e)}")
         raise HTTPException(status_code=500, detail="Internal server error")
+
+@predict_route.get(
+    "/{task_id}",
+    response_model=MLTask,
+    summary="Get ML task status by task_id"
+)
+async def get_task_status(task_id: int, session=Depends(get_session)) -> MLTask:
+    """Возвращает информацию по одной ML-задаче по её task_id"""
+    try:
+        task = session.get(MLTask, task_id)
+        if not task:
+            logger.warning(f"Task with ID {task_id} not found")
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Task not found"
+            )
+        return task
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error getting task status: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Error getting task status"
+        )

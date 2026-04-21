@@ -6,6 +6,8 @@ from database.database import engine
 from sqlmodel import Session
 from models.ml_task import MLTask, TaskStatus
 import uuid
+from database.config import get_settings
+from llm import do_task
 
 logging.basicConfig(
     level=logging.DEBUG,
@@ -14,28 +16,31 @@ logging.basicConfig(
 
 logger = logging.getLogger(__name__)
 
+settings = get_settings()
+
 worker_id = str(uuid.uuid4())[:8]
 logger.info(f"Worker ID: {worker_id}")
 
 connection_params = pika.ConnectionParameters(
-    host='rabbitmq', 
-    port=5672,
+    host=settings.RABBITMQ_HOST, 
+    port=settings.RABBITMQ_PORT,
     virtual_host='/',
     credentials=pika.PlainCredentials(
-        username='guest',
-        password='guest'
+        username=settings.RABBITMQ_USER,
+        password=settings.RABBITMQ_PASS
     ),
-    heartbeat=30,
-    blocked_connection_timeout=2
+    heartbeat=0,
+    blocked_connection_timeout=None
 )
 
 connection = pika.BlockingConnection(connection_params)
 channel = connection.channel()
-queue_name = 'ml_task_queue'
+queue_name = settings.RABBITMQ_QUEUE_NAME
 channel.queue_declare(queue=queue_name)  # Создание очереди (если не существует)
 
 # Функция, которая будет вызвана при получении сообщения
 def callback(ch, method, properties, body):
+    task_id = None
     try:
         message = json.loads(body)
         task_id = message.get("task_id")
@@ -52,8 +57,13 @@ def callback(ch, method, properties, body):
                 session.add(task)
                 session.commit()
                 
-        time.sleep(3)
-        prediction = f"Успешная генерация: {features.get('x1')} / {features.get('x2')}"
+        image_url = features.get("x1")
+        manual_text = features.get("x2")
+
+        prediction = do_task(
+            image_url=image_url,
+            manual_text=manual_text
+        )
 
         logger.info(f"Задача № {task_id} успешно выполнена. Результат: {prediction}")
 
@@ -68,9 +78,22 @@ def callback(ch, method, properties, body):
         ch.basic_ack(delivery_tag=method.delivery_tag) # Ручное подтверждение обработки сообщения
     
     except Exception as e:
-        logger.error(f"Ошибка при обработке сообщения {str(e)}")
-        ch.basic_nack(delivery_tag=method.delivery_tag, requeue=False)
+        logger.exception(f"Ошибка при обработке сообщения: {str(e)}")
 
+        if task_id is not None:
+            with Session(engine) as session:
+                task = session.get(MLTask, task_id)
+                if task:
+                    task.status = TaskStatus.FAILED
+                    task.result_text = str(e)
+                    session.add(task)
+                    session.commit()
+
+        try:
+            if ch.is_open:
+                ch.basic_ack(delivery_tag=method.delivery_tag)
+        except Exception as ack_error:
+            logger.error(f"Не удалось подтвердить сообщение после ошибки: {ack_error}")
 
 # Подписка на очередь и установка обработчика сообщений
 channel.basic_consume(
