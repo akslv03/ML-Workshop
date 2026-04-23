@@ -5,6 +5,8 @@ import json
 from database.database import engine 
 from sqlmodel import Session
 from models.ml_task import MLTask, TaskStatus
+from models.ml_model import MLModel
+from services.crud import balance as BalanceService
 import uuid
 from database.config import get_settings
 from llm import do_task
@@ -70,9 +72,20 @@ def callback(ch, method, properties, body):
         with Session(engine) as session:
             task = session.get(MLTask, task_id)
             if task:
+                ml_model = session.get(MLModel, task.ml_model_id)
+                if not ml_model:
+                    raise RuntimeError(f"MLModel for task {task.id} not found")
                 task.status = TaskStatus.COMPLETED
                 task.result_text = prediction
                 session.add(task)
+
+                BalanceService.deduct_balance(
+                    user_id=task.user_id,
+                    amount=ml_model.cost_per_prediction,
+                    task_id=task.id,
+                    session=session
+                )
+
                 session.commit()
 
         ch.basic_ack(delivery_tag=method.delivery_tag) # Ручное подтверждение обработки сообщения

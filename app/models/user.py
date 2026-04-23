@@ -1,4 +1,5 @@
 from sqlmodel import SQLModel, Field, Relationship
+from auth.hash_password import HashPassword
 from typing import Optional, List, TYPE_CHECKING
 from datetime import datetime
 import enum
@@ -66,7 +67,7 @@ class User(SQLModel, table=True):
 
     def check_password(self, input_password: str) -> bool:
         """Проверяет пароль при авторизации пользователя."""
-        return self.password == input_password
+        return HashPassword().verify_hash(input_password, self.password)
         
     class Config:
         validate_assignment = True

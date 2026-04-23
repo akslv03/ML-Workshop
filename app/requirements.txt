@@ -10,3 +10,7 @@ pydantic-settings
 sqlmodel
 starlette
 pika
+Jinja2
+python-multipart
+passlib
+python-jose

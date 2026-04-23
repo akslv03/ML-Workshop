@@ -1,0 +1,9 @@
+<a href="/">Главная</a> |
+
+{% if user %}
+    <a href="/private?user_id={{ user.id }}">Личный кабинет</a> |
+    <a href="/api/history/page?user_id={{ user.id }}">История</a> |
+    <a href="/auth/logout">Выход</a>
+{% else %}
+    <a href="/auth/login">Вход</a>
+{% endif %}

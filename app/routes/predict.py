@@ -1,4 +1,5 @@
-from fastapi import APIRouter, HTTPException, status, Depends
+from fastapi import APIRouter, HTTPException, status, Depends, Form, File, UploadFile
+from fastapi.responses import RedirectResponse
 from pydantic import BaseModel
 from database.database import get_session
 from models.ml_task import MLTask
@@ -7,12 +8,91 @@ from services.crud import balance as BalanceService
 from services.crud import ml_task as TaskService
 from typing import Optional, List
 import logging
+import os
+import shutil
 from datetime import datetime
 from services.rm.rm import send_task
 
 logger = logging.getLogger(__name__)
 
 predict_route = APIRouter()
+
+@predict_route.post("/web")
+async def generate_description_web(
+    user_id: int = Form(...),
+    ml_model_id: int = Form(...),
+    manual_text: Optional[str] = Form(None),
+    image: UploadFile = File(...),
+    session=Depends(get_session)
+):
+    """
+    Web-роут для загрузки файла из HTML-формы.
+    Сохраняет файл, создает ML-зачу и отправляет пользователя обратно в кабинет.
+    """
+    try:
+        model = session.get(MLModel, ml_model_id)
+        if not model:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="ML Model not found")
+        
+        current_balance = BalanceService.get_user_balance(user_id, session)
+        if current_balance < model.cost_per_prediction:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Недостаточно средств. Текущий баланс: {current_balance}")
+
+        upload_dir = "/app/uploads"
+        os.makedirs(upload_dir, exist_ok=True)
+
+        filename = os.path.basename(image.filename or "upload.jpg")
+        file_path = os.path.join(upload_dir, filename)
+
+        with open(file_path, "wb") as buffer:
+            shutil.copyfileobj(image.file, buffer)
+
+        image_url = file_path
+
+        new_task = MLTask(
+            user_id=user_id,
+            ml_model_id=ml_model_id,
+            image_url=image_url,
+            manual_text=manual_text
+        )
+
+        saved_task = TaskService.create_task(new_task, session)
+
+        message = {
+            "task_id": saved_task.id,
+            "features": {
+                "x1": image_url,
+                "x2": manual_text
+            },
+            "model": model.name,
+            "timestamp": datetime.utcnow().isoformat()
+        }
+
+        send_task(message)
+
+        return RedirectResponse(
+            url=f"/private?user_id={user_id}&success=ML task created successfully",
+            status_code=status.HTTP_303_SEE_OTHER
+        )
+
+    except ValueError as ve:
+        return RedirectResponse(
+            url=f"/private?user_id={user_id}&error={str(ve)}",
+            status_code=status.HTTP_303_SEE_OTHER
+        )
+    except HTTPException as he:
+        return RedirectResponse(
+            url=f"/private?user_id={user_id}&error={he.detail}",
+            status_code=status.HTTP_303_SEE_OTHER
+        )
+    except Exception as e:
+        logger.error(f"Error creating task from web form: {str(e)}")
+        return RedirectResponse(
+            url=f"/private?user_id={user_id}&error=Internal server error",
+            status_code=status.HTTP_303_SEE_OTHER
+        )
 
 class PredictRequest(BaseModel):
     user_id: int
@@ -28,13 +108,19 @@ class PredictRequest(BaseModel):
 )
 async def generate_description(request: PredictRequest, session=Depends(get_session)):
     """
-    Создает задачу, списывает баланс, отправляет задачу в RabbitMQ
+    Создает задачу, проверяет баланс и отправляет задачу в RabbitMQ
     """
     try:
         model = session.get(MLModel, request.ml_model_id)
         if not model:
             logger.warning(f"Model with ID {request.ml_model_id} not found.")
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="ML Model not found")
+
+        current_balance = BalanceService.get_user_balance(request.user_id, session)
+        if current_balance < model.cost_per_prediction:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST, 
+                detail=f"Недостаточно средств. Текущий баланс: {current_balance}")
 
         new_task = MLTask(
             user_id=request.user_id,
@@ -44,15 +130,6 @@ async def generate_description(request: PredictRequest, session=Depends(get_sess
         )
 
         saved_task = TaskService.create_task(new_task, session)
-
-        BalanceService.deduct_balance(
-            user_id=request.user_id, 
-            amount=model.cost_per_prediction, 
-            task_id=saved_task.id, 
-            session=session
-        )
-
-        # saved_task.run_task()
 
         session.add(saved_task)
         session.commit()

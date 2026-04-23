@@ -42,7 +42,7 @@ def create_application() -> FastAPI:
     # Register routes
     app.include_router(home_route, tags=['Home'])
     app.include_router(user_route, prefix='/api/users', tags=['Users'])
-    app.include_router(auth_route, prefix='/api/auth', tags=['Auth'])
+    app.include_router(auth_route, prefix='/auth', tags=['Auth'])
     app.include_router(balance_route, prefix='/api/balance', tags=['Balance'])
     app.include_router(predict_route, prefix='/api/predict', tags=['ML Predictions'])
     app.include_router(history_route, prefix='/api/history', tags=['History'])

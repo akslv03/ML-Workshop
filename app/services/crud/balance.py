@@ -36,32 +36,37 @@ def deduct_balance(user_id: int, amount: float, task_id: int, session: Session) 
     Списание кредитов за ML-задачу.
     Проверяет баланс перед списанием.
     """
-    try:
-        if amount <= 0:
-            raise ValueError("Сумма списания должна быть больше нуля")
+    if amount <= 0:
+        raise ValueError("Сумма списания должна быть больше нуля")
+    
+    user = session.get(User, user_id)
+    
+    if not user:
+        raise ValueError("Пользователь не найден")
+    
+    debit = session.exec(
+            select(Transaction).where(
+                Transaction.user_id == user_id,
+                Transaction.task_id == task_id,
+                Transaction.type == TransactionType.DEBIT
+            )
+    ).first()
+
+    if debit:
+        return debit
+
+    current_balance = get_user_balance(user_id, session)
+    if current_balance < amount:
+        raise ValueError(f"Недостаточно средств. Текущий баланс: {current_balance}")
         
-        user = session.get(User, user_id)
-        
-        if not user:
-            raise ValueError("Пользователь не найден")
-        
-        current_balance = get_user_balance(user_id, session)
-        if current_balance < amount:
-            raise ValueError(f"Недостаточно средств. Текущий баланс: {current_balance}")
-            
-        transaction = Transaction(
-            user_id=user_id,
-            task_id=task_id,
-            amount=amount,
-            type=TransactionType.DEBIT
-        )
-        session.add(transaction)
-        session.commit()
-        session.refresh(transaction)
-        return transaction
-    except Exception:
-        session.rollback()
-        raise
+    transaction = Transaction(
+        user_id=user_id,
+        task_id=task_id,
+        amount=amount,
+        type=TransactionType.DEBIT
+    )
+    session.add(transaction)
+    return transaction
 
 def get_user_transactions(user_id: int, session: Session) -> List[Transaction]:
     """

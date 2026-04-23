@@ -1,0 +1,94 @@
+{% extends "base.html" %}
+
+{% block title %}Кабинет{% endblock %}
+
+{% block content %}
+<h1>Личный кабинет</h1>
+
+<h2>Пользователь</h2>
+
+{% if user %}
+    <p><strong>ID:</strong> {{ user.id }}</p>
+    <p><strong>Имя:</strong> {{ user.username }}</p>
+    <p><strong>Email:</strong> {{ user.email }}</p>
+    <p><strong>Роль:</strong> {{ user.role }}</p>
+    <p><strong>Дата регистрации:</strong> {{ user.created_at }}</p>
+{% else %}
+    <p>Пользователь не найден.</p>
+{% endif %}
+
+<h2>Баланс</h2>
+
+{% if balance is not none %}
+    <p><strong>Текущий баланс:</strong> {{ balance }}</p>
+{% else %}
+    <p>Баланс пока недоступен.</p>
+{% endif %}
+
+<h2>Пополнение баланса</h2>
+
+{% if user %}
+<form action="/api/balance/{{ user.id }}/topup/web" method="post">
+    <input type="hidden" name="user_id" value="{{ user.id }}">
+    <p>
+        <label for="amount">Сумма пополнения</label><br>
+        <input id="amount" type="number" name="amount" min="1" required>
+    </p>
+    <button type="submit">Пополнить баланс</button>
+</form>
+{% else %}
+<p>Пополнение недоступно, потому что пользователь не определён.</p>
+{% endif %}
+
+<h2>Генерация описания товара</h2>
+
+{% if user %}
+<form action="/api/predict/web" method="post" enctype="multipart/form-data">
+    <input type="hidden" name="user_id" value="{{ user.id }}">
+
+    <div>
+        <label for="ml_model_id">ID ML-модели:</label><br>
+        <input type="number" id="ml_model_id" name="ml_model_id" value="1" min="1">
+    </div>
+
+    <br>
+
+    <div>
+        <label for="image">Изображение товара:</label><br>
+        <input type="file" id="image" name="image" accept="image/*" required>
+    </div>
+
+    <br>
+
+    <div>
+        <label for="manual_text">Дополнительный текст:</label><br>
+        <textarea id="manual_text" name="manual_text" rows="5" cols="50"
+                  placeholder="Введите описание, характеристики или комментарий к товару"></textarea>
+    </div>
+
+    <br>
+
+    <button type="submit">Сгенерировать описание</button>
+</form>
+{% else %}
+<p>Генерация недоступна, потому что пользователь не определён.</p>
+{% endif %}
+
+{% if error %}
+    <p style="color: red;"><strong>Ошибка:</strong> {{ error }}</p>
+{% endif %}
+
+{% if success %}
+    <p style="color: green;"><strong>Успешно:</strong> {{ success }}</p>
+{% endif %}
+
+<h2>Результат</h2>
+<p>Здесь будет отображаться результат генерации или сообщение об ошибке.</p>
+
+<h2>История</h2>
+{% if user %}
+    <p><a href="/api/history/page?user_id={{ user.id }}">Перейти к истории операций</a></p>
+{% else %}
+    <p>История недоступна, потому что пользователь не определён.</p>
+{% endif %}
+{% endblock %}
