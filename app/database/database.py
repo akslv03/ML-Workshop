@@ -41,15 +41,15 @@ def init_db(drop_all: bool = False) -> None:
         SQLModel.metadata.create_all(engine)
         
         with Session(engine) as session:
-            default_model = session.exec(select(MLModel).where(MLModel.name == "llava:7b")).first()
+            default_model = session.exec(select(MLModel).where(MLModel.name == "moondream")).first()
             if not default_model:
                 default_model = MLModel(
-                    name="llava:7b",
+                    name="moondream",
                     description="Анализирует фото этикетки товара и дополнительный текст для генерации описания товара для маркетплейсов",
                     cost_per_prediction=5.0
                 )
                 session.add(default_model)
-                print("Создана базовая ML-модель: llava:7b")
+                print("Создана базовая ML-модель: moondream")
 
             admin = session.exec(select(User).where(User.email == "admin@market.com")).first()
             if not admin:
