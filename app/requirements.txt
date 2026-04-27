@@ -14,3 +14,6 @@ Jinja2
 python-multipart
 passlib
 python-jose
+bcrypt
+pytest
+httpx

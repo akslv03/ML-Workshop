@@ -11,3 +11,7 @@ sqlmodel
 starlette
 pika
 requests
+Jinja2
+python-multipart
+passlib
+python-jose
