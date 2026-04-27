@@ -1,6 +1,7 @@
 import requests
 import logging
 import base64
+import os
 
 OLLAMA_URL = "http://ollama:11434/api/generate"
 MODEL_NAME = "moondream"
@@ -13,13 +14,15 @@ logging.basicConfig(
 
 logger = logging.getLogger(__name__)
 
-
 def _download_image_as_base64(image_url: str) -> str:
-    response = requests.get(image_url, timeout=30)
-    response.raise_for_status()
-    logger.info(f"Downloaded image size: {len(response.content)} bytes from {image_url}")
-    return base64.b64encode(response.content).decode("utf-8")
+    if not os.path.exists(image_url):
+        raise RuntimeError(f"Файл изображения не найден: {image_url}")
 
+    with open(image_url, "rb") as f:
+        content = f.read()
+
+    logger.info(f"Loaded local image size: {len(content)} bytes from path {image_url}")
+    return base64.b64encode(content).decode("utf-8")
 
 def do_task(image_url: str, manual_text: str | None = None) -> str:
     try:

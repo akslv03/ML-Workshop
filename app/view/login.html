@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+
+{% block title %}Вход{% endblock %}
+
+{% block content %}
+<h1>Вход в личный кабинет</h1>
+
+<p>Введите email и пароль, чтобы войти в сервис.</p>
+
+{% if error %}
+<p style="color: red">{{ error }}</p>
+{% endif %}
+
+<form action="/auth/login" method="post">
+    <p>
+        <label>Email</label><br>
+        <input type="email" name="email" required>
+    </p>
+
+    <p>
+        <label>Пароль</label><br>
+        <input type="password" name="password" required>
+    </p>
+
+    <button type="submit">Войти</button>
+</form>
+
+<p>
+    Ещё нет аккаунта?
+    <a href="/auth/signup">Зарегистрируйтесь</a>
+</p>
+
+{% endblock %}

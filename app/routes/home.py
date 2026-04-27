@@ -1,26 +1,57 @@
-from typing import Dict
-from fastapi import APIRouter, HTTPException
+from typing import Dict, Optional
+from fastapi import APIRouter, HTTPException, Request, Depends
+from fastapi.templating import Jinja2Templates
+from fastapi.responses import HTMLResponse, RedirectResponse
+from sqlmodel import Session
+from database.database import get_session
+from services.crud import balance as BalanceService
+from auth.authenticate import authenticate_cookie
+from services.crud import user as UserService
 
 home_route = APIRouter()
+templates = Jinja2Templates(directory="view")
 
-@home_route.get(
-    "/",
-    response_model=Dict[str, str],
-    summary="Root endpoint",
-    description="Returns a welcome message"
-)
-async def index() -> Dict[str, str]:
-    """
-    Root endpoint returning welcome message.
+@home_route.get("/", response_class=HTMLResponse)
+async def index(request: Request):
+    return templates.TemplateResponse(
+        request=request,
+        name="index.html",
+        context={}
+    )
 
-    Returns:
-        Dict[str, str]: Welcome message
-    """
-    try:
-        return {"message": "Welcome to Product Description API"}
-    except Exception as e:
-        raise HTTPException(status_code=500, detail="Internal server error")
-    
+@home_route.get("/private", response_class=HTMLResponse)
+async def private_page(
+    request: Request,
+    user_email: str = Depends(authenticate_cookie),
+    error: Optional[str] = None,
+    success: Optional[str] = None,
+    session: Session = Depends(get_session)
+):
+    user = UserService.get_user_by_email(user_email, session)
+    if user is None:
+        return RedirectResponse(url="/auth/login", status_code=303)
+
+    balance = BalanceService.get_user_balance(user.id, session)
+
+    return templates.TemplateResponse(
+        request=request,
+        name="private.html",
+        context={
+            "user": user,
+            "balance": balance,
+            "error": error,
+            "success": success
+        }
+    )
+
+@home_route.get("/history", response_class=HTMLResponse)
+async def history_page(request: Request):
+    return templates.TemplateResponse(
+        request=request,
+        name="history.html",
+        context={}
+    )
+
 @home_route.get(
     "/health",
     response_model=Dict[str, str],

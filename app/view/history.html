@@ -1,0 +1,53 @@
+{% extends "base.html" %}
+
+{% block title %}История{% endblock %}
+
+{% block content %}
+<h1>История операций</h1>
+
+<h2>История генераций</h2>
+
+{% if tasks %}
+<table border="1" cellpadding="6">
+    <tr>
+        <th>Дата и время</th>
+        <th>Тип операции</th>
+        <th>Списание</th>
+        <th>Статус</th>
+    </tr>
+    {% for task in tasks %}
+    <tr>
+        <td>{{ task.created_at }}</td>
+        <td>Генерация описания</td>
+        <td>-</td>
+        <td>{{ task.status }}</td>
+    </tr>
+    {% endfor %}
+</table>
+{% else %}
+<p>История генераций пока пуста.</p>
+{% endif %}
+
+<h2>История транзакций</h2>
+
+{% if transactions %}
+<table border="1" cellpadding="6">
+    <tr>
+        <th>Дата и время</th>
+        <th>Тип операции</th>
+        <th>Сумма</th>
+        <th>Статус</th>
+    </tr>
+    {% for transaction in transactions %}
+    <tr>
+        <td>{{ transaction.created_at }}</td>
+        <td>{{ transaction.type }}</td>
+        <td>{{ transaction.amount }}</td>
+        <td>Выполнено</td>
+    </tr>
+    {% endfor %}
+</table>
+{% else %}
+<p>История транзакций пока пуста.</p>
+{% endif %}
+{% endblock %}

@@ -1,14 +1,45 @@
-from fastapi import APIRouter, HTTPException, Depends
+from fastapi import APIRouter, HTTPException, Depends, Request
+from fastapi.templating import Jinja2Templates
+from fastapi.responses import HTMLResponse, RedirectResponse
 from database.database import get_session
 from models.ml_task import MLTask
 from models.transaction import Transaction
 from services.crud import balance as BalanceService
 from services.crud import ml_task as TaskService
-from typing import List
+from typing import List, Optional
+from auth.authenticate import authenticate_cookie
+from services.crud import user as UserService
 import logging
 
 logger = logging.getLogger(__name__)
 history_route = APIRouter()
+templates = Jinja2Templates(directory="view")
+
+@history_route.get("/page", response_class=HTMLResponse)
+async def history_page(
+    request: Request,
+    user_email: str = Depends(authenticate_cookie),
+    session=Depends(get_session)
+):
+    user = UserService.get_user_by_email(user_email, session)
+    if user is None:
+        return RedirectResponse(
+            url="/auth/login",
+            status_code=303
+        )
+
+    transactions = BalanceService.get_user_transactions(user.id, session)
+    tasks = TaskService.get_user_tasks(user.id, session)
+
+    return templates.TemplateResponse(
+        request=request,
+        name="history.html",
+        context={
+            "transactions": transactions,
+            "tasks": tasks,
+            "user_id": user.id
+        }
+    )
 
 @history_route.get(
     "/{user_id}/transactions",
