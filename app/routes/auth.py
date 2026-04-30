@@ -7,7 +7,7 @@ from database.config import get_settings
 from database.database import get_session
 from models.user import User
 from services.crud import user as UserService
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from typing import Dict
 from auth.hash_password import HashPassword
 import logging
@@ -138,7 +138,7 @@ async def login_post(
 class UserSignup(BaseModel):
      username: str
      email: str
-     password: str
+     password: str = Field(..., min_length=4)
 
 class UserSignin(BaseModel):
      email: str
