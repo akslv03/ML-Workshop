@@ -7,6 +7,7 @@ from database.database import get_session
 from services.crud import balance as BalanceService
 from auth.authenticate import authenticate_cookie
 from services.crud import user as UserService
+from services.crud import ml_task as TaskService
 
 home_route = APIRouter()
 templates = Jinja2Templates(directory="view")
@@ -32,6 +33,8 @@ async def private_page(
         return RedirectResponse(url="/auth/login", status_code=303)
 
     balance = BalanceService.get_user_balance(user.id, session)
+    tasks = TaskService.get_user_tasks(user.id, session)
+    last_task = tasks[0] if tasks else None
 
     return templates.TemplateResponse(
         request=request,
@@ -40,7 +43,8 @@ async def private_page(
             "user": user,
             "balance": balance,
             "error": error,
-            "success": success
+            "success": success,
+            "last_task": last_task
         }
     )
 

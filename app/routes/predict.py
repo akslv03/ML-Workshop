@@ -73,7 +73,7 @@ async def generate_description_web(
         send_task(message)
 
         return RedirectResponse(
-            url=f"/private?user_id={user_id}&success=ML task created successfully",
+            url=f"/private?user_id={user_id}&success=Задача принята в обработку",
             status_code=status.HTTP_303_SEE_OTHER
         )
 

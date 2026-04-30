@@ -77,6 +77,25 @@ async def signup_web(
     session=Depends(get_session)
 ):
     try:
+        User(username=username, email=email, password="temp1234")._validate_email()
+        if not password or not password.strip():
+            return templates.TemplateResponse(
+                request=request,
+                name="signup.html",
+                context={"error": "Введите пароль"}
+            )
+        if len(password) < 4:
+            return templates.TemplateResponse(
+                request=request,
+                name="signup.html",
+                context={"error": "Пароль должен быть не короче 4 символов"}
+            )
+        if len(password.encode("utf-8")) > 72:
+            return templates.TemplateResponse(
+                request=request,
+                name="signup.html",
+                context={"error": "Пароль слишком длинный"}
+            )
         if UserService.get_user_by_email(email, session):
             return templates.TemplateResponse(
                 request=request,
@@ -95,7 +114,12 @@ async def signup_web(
             url="/auth/login",
             status_code=status.HTTP_303_SEE_OTHER
         )
-
+    except ValueError:
+        return templates.TemplateResponse(
+            request=request,
+            name="signup.html",
+            context={"error": "Некорректный формат email"}
+        )
     except Exception as e:
         logger.error(f"Error during web signup: {str(e)}")
         return templates.TemplateResponse(
