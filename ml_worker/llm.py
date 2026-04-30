@@ -4,8 +4,8 @@ import base64
 import os
 
 OLLAMA_URL = "http://ollama:11434/api/generate"
-MODEL_NAME = "moondream"
-REQUEST_TIMEOUT = 180
+MODEL_NAME = "qwen3.5:0.8b"
+REQUEST_TIMEOUT = 360
 
 logging.basicConfig(
     level=logging.INFO,
@@ -29,18 +29,14 @@ def do_task(image_url: str, manual_text: str | None = None) -> str:
         image_base64 = _download_image_as_base64(image_url)
 
         prompt = (
-            "You are analyzing a product label in the image.\n"
-            "Answer in English with short phrases, not full sentences.\n\n"
-            "Extract the following fields as clearly as possible from the label:\n"
-            "1) Product type (e.g. shampoo, conditioner, body wash)\n"
-            "2) Brand name\n"
-            "3) Main benefit (e.g. hair fall control, volume, moisturizing)\n"
-            "4) Hair type or target (if visible)\n\n"
-            "Format your answer exactly like this:\n"
-            "type: <type>\n"
-            "brand: <brand>\n"
-            "benefit: <benefit>\n"
-            "target: <target or unknown>\n"
+            "OCR TASK.\n"
+            "Extract ONLY visible text from image.\n"
+            "Do NOT describe.\n"
+            "Do NOT interpret.\n"
+            "Do NOT add missing text.\n"
+            "Return raw text exactly as seen.\n"
+            "If unreadable, skip it.\n"
+            "Output ONLY text.\n"
         )
         
         if manual_text:
@@ -61,14 +57,18 @@ def do_task(image_url: str, manual_text: str | None = None) -> str:
         logger.info(f"Ollama raw response text: {response.text}")
 
         if response.status_code == 404:
-            raise RuntimeError("Модель moondream не найдена в Ollama")
+            raise RuntimeError(f"Модель {MODEL_NAME} не найдена в Ollama")
 
         response.raise_for_status()
         data = response.json()
 
         result = data.get("response", "").strip()
         if not result:
-            raise RuntimeError("Модель не вернула описание")
+            thinking = data.get("thinking", "").strip()
+            if thinking:
+                result = thinking
+            else:
+                raise RuntimeError("Модель не вернула ни response, ни thinking")
 
         return result
 

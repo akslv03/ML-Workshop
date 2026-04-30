@@ -36,6 +36,8 @@ services:
         condition: service_started
       ollama:
         condition: service_started
+    cpus: "1.0"
+    mem_limit: 512m
     deploy:
       replicas: 2
     environment:
@@ -92,6 +94,12 @@ services:
     volumes:
       - ollama_data:/root/.ollama
     restart: unless-stopped
+    cpus: "4.0"
+    mem_limit: 4g
+    environment:
+      - OLLAMA_NUM_PARALLEL=1
+      - OLLAMA_MAX_LOADED_MODELS=1
+      - OLLAMA_KEEP_ALIVE=5m 
     networks:
       - product-description-network
 

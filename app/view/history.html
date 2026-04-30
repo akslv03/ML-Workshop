@@ -36,14 +36,12 @@
         <th>Дата и время</th>
         <th>Тип операции</th>
         <th>Сумма</th>
-        <th>Статус</th>
     </tr>
     {% for transaction in transactions %}
     <tr>
         <td>{{ transaction.created_at }}</td>
         <td>{{ transaction.type }}</td>
         <td>{{ transaction.amount }}</td>
-        <td>Выполнено</td>
     </tr>
     {% endfor %}
 </table>

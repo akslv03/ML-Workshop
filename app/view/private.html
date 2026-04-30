@@ -8,11 +8,15 @@
 <h2>Пользователь</h2>
 
 {% if user %}
-    <p><strong>ID:</strong> {{ user.id }}</p>
+    {% if user.role.value == "admin" %}
+        <p><strong>ID:</strong> {{ user.id }}</p>
+    {% endif %}
     <p><strong>Имя:</strong> {{ user.username }}</p>
     <p><strong>Email:</strong> {{ user.email }}</p>
-    <p><strong>Роль:</strong> {{ user.role }}</p>
-    <p><strong>Дата регистрации:</strong> {{ user.created_at }}</p>
+    {% if user.role.value == "admin" %}
+        <p><strong>Роль:</strong> Администратор</p>
+    {% endif %}
+    <p><strong>Дата регистрации:</strong> {{ user.created_at.strftime("%d.%m.%Y %H:%M:%S") }}</p>
 {% else %}
     <p>Пользователь не найден.</p>
 {% endif %}
@@ -83,7 +87,28 @@
 {% endif %}
 
 <h2>Результат</h2>
-<p>Здесь будет отображаться результат генерации или сообщение об ошибке.</p>
+
+{% if last_task %}
+    {% if last_task.status.value == "completed" %}
+        <div style="color: black;">
+            <strong>Готово:</strong>
+            <div style="white-space: pre-line; word-break: break-word; margin-top: 8px;">
+                {{ last_task.result_text }}
+            </div>
+        </div>
+    {% elif last_task.status.value == "failed" %}
+        <div style="color: red;">
+            <strong>Ошибка генерации:</strong>
+            <div style="white-space: pre-line; word-break: break-word; margin-top: 8px;">
+                {{ last_task.result_text or "Подробности в логах" }}
+            </div>
+        </div>
+    {% else %}
+        <p><strong>Статус:</strong> Задача в обработке...</p>
+    {% endif %}
+{% else %}
+    <p>Здесь будет отображаться результат генерации.</p>
+{% endif %}
 
 <h2>История</h2>
 {% if user %}
