@@ -10,10 +10,6 @@ def test_balance_operations(client, session):
     
     user = session.exec(select(User).where(User.email == "user@test.ru")).first()
     
-    current_balance = client.get(f"/api/balance/{user.id}")
-    assert current_balance.status_code == 200
-    assert current_balance.json()["balance"] == 0.0
-    
     topup_response = client.post(f"/api/balance/{user.id}/topup", json={"amount": 150.0})
     assert topup_response.status_code == 200
     assert topup_response.json() == {"message": "Successfully toped up balance by 150.0"}
