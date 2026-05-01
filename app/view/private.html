@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 
-{% block title %}Кабинет{% endblock %}
+{% block title %}Личный кабинет{% endblock %}
 
 {% block content %}
 <h1>Личный кабинет</h1>
@@ -44,15 +44,20 @@
 <p>Пополнение недоступно, потому что пользователь не определён.</p>
 {% endif %}
 
-<h2>Генерация описания товара</h2>
+<h2>Извлечение текстового описания товара</h2>
 
 {% if user %}
 <form action="/api/predict/web" method="post" enctype="multipart/form-data">
     <input type="hidden" name="user_id" value="{{ user.id }}">
 
     <div>
-        <label for="ml_model_id">ID ML-модели:</label><br>
-        <input type="number" id="ml_model_id" name="ml_model_id" value="1" min="1">
+        <label for="ml_model_id">ML-модель:</label><br>
+        <select id="ml_model_id" name="ml_model_id" required>
+            <option value="">Выберите модель</option>
+            {% for model in ml_models %}
+            <option value="{{ model.id }}">{{ model.name }} (ID: {{ model.id }})</option>
+            {% endfor %}
+        </select>
     </div>
 
     <br>
@@ -72,10 +77,10 @@
 
     <br>
 
-    <button type="submit">Сгенерировать описание</button>
+    <button type="submit">Извлечь текст</button>
 </form>
 {% else %}
-<p>Генерация недоступна, потому что пользователь не определён.</p>
+<p>Извлечение недоступно, потому что пользователь не определён.</p>
 {% endif %}
 
 {% if error %}
@@ -98,7 +103,7 @@
         </div>
     {% elif last_task.status.value == "failed" %}
         <div style="color: red;">
-            <strong>Ошибка генерации:</strong>
+            <strong>Ошибка:</strong>
             <div style="white-space: pre-line; word-break: break-word; margin-top: 8px;">
                 {{ last_task.result_text or "Подробности в логах" }}
             </div>
@@ -107,7 +112,7 @@
         <p><strong>Статус:</strong> Задача в обработке...</p>
     {% endif %}
 {% else %}
-    <p>Здесь будет отображаться результат генерации.</p>
+    <p>Здесь будет отображаться результат.</p>
 {% endif %}
 
 <h2>История</h2>

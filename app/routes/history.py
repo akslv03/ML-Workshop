@@ -37,7 +37,8 @@ async def history_page(
         context={
             "transactions": transactions,
             "tasks": tasks,
-            "user_id": user.id
+            "user_id": user.id,
+            "user": user
         }
     )
 
